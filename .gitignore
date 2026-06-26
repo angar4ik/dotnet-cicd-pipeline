@@ -1,0 +1,37 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.DotSettings.user
+
+# Test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# IDE
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit these
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+
+# Docker local overrides
+docker-compose.override.yml
+
+# Deploy artifacts (simulated deploy writes here locally)
+deploy-artifacts/
