@@ -34,7 +34,7 @@ jobs:
         run: dotnet restore ${{ env.SOLUTION }}
 
       - name: Build
-        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore
+        run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore /p:GitSha=${{ github.sha }}
 
       - name: Test with coverage gate
         run: |

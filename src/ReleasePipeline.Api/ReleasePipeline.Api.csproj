@@ -7,9 +7,39 @@
     <RootNamespace>ReleasePipeline.Api</RootNamespace>
     <AssemblyName>ReleasePipeline.Api</AssemblyName>
     <Version>1.0.0</Version>
+    <!-- Overridden at build time when GitSha is supplied (CI, Docker) or resolved from git -->
+    <GitSha Condition="'$(GitSha)' == ''">unknown</GitSha>
+    <AssemblyInformationalVersion>$(Version)+$(GitSha)</AssemblyInformationalVersion>
   </PropertyGroup>
 
+  <!-- Resolve git SHA locally when not passed via /p:GitSha=... -->
+  <Target Name="ResolveGitSha" BeforeTargets="GetAssemblyVersion;CoreCompile" Condition="'$(GitSha)' == 'unknown'">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitShaFromGit" />
+    </Exec>
+    <PropertyGroup>
+      <GitSha Condition="'$(GitShaFromGit)' != ''">$(GitShaFromGit.Trim())</GitSha>
+      <AssemblyInformationalVersion>$(Version)+$(GitSha)</AssemblyInformationalVersion>
+    </PropertyGroup>
+  </Target>
+
   <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>BuildTime</_Parameter1>
+      <_Parameter2>$([System.DateTime]::UtcNow.ToString("o"))</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GitSha</_Parameter1>
+      <_Parameter2>$(GitSha)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
 

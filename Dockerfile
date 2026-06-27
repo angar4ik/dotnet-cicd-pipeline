@@ -4,6 +4,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+ARG GIT_SHA=unknown
+
 COPY ReleasePipeline.sln ./
 COPY src/ReleasePipeline.Api/ReleasePipeline.Api.csproj src/ReleasePipeline.Api/
 COPY tests/ReleasePipeline.Api.Tests/ReleasePipeline.Api.Tests.csproj tests/ReleasePipeline.Api.Tests/
@@ -14,7 +16,8 @@ COPY . .
 RUN dotnet publish src/ReleasePipeline.Api/ReleasePipeline.Api.csproj \
     -c Release \
     -o /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:GitSha=${GIT_SHA}
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app

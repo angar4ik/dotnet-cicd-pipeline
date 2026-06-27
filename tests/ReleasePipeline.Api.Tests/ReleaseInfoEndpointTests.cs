@@ -25,11 +25,14 @@ public class ReleaseInfoEndpointTests : IClassFixture<WebApplicationFactory<Prog
         Assert.NotNull(body);
         Assert.Equal("ReleasePipeline.Api", body.Service);
         Assert.False(string.IsNullOrWhiteSpace(body.Version));
+        Assert.False(string.IsNullOrWhiteSpace(body.InformationalVersion));
+        Assert.Contains("+", body.InformationalVersion);
     }
 
     private sealed record ReleaseInfoResponse(
         string Service,
         string Version,
+        string InformationalVersion,
         string Environment,
         string? BuildTime,
         string GitSha,

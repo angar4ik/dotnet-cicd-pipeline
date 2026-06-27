@@ -32,6 +32,15 @@ curl http://localhost:5080/health
 # {"status":"healthy","timestamp":"..."}
 ```
 
+### `GET /ready`
+
+Readiness check — verifies downstream dependencies before accepting traffic. Returns `503` when a configured dependency is unreachable.
+
+```bash
+curl http://localhost:5080/ready
+# {"status":"ready","dependencies":[],"timestamp":"..."}
+```
+
 ### `GET /api/release-info`
 
 Proves **which version** is running in an environment — essential when debugging "works in staging, broken in prod."
@@ -67,9 +76,85 @@ Swagger UI (Development only): http://localhost:5080/swagger
 
 ## Stretch goals
 
-- Add `AssemblyInformationalVersion` with git SHA at build time via MSBuild
-- Add OpenTelemetry traces for request latency
-- Add a `/ready` endpoint that checks downstream dependencies
+These are implemented in the repo — read this section to understand **why** each one matters in production CI/CD.
+
+### `AssemblyInformationalVersion` with git SHA (MSBuild)
+
+**Problem:** `AssemblyVersion` (e.g. `1.0.0`) changes only when you bump the package. At deploy time you need to know *exactly* which commit is running — especially when debugging "staging works, prod doesn't."
+
+**Solution:** MSBuild stamps the assembly at compile time:
+
+| Source | Mechanism |
+|--------|-----------|
+| Local `dotnet build` | `git rev-parse --short HEAD` via an MSBuild target |
+| CI | `/p:GitSha=${{ github.sha }}` in `.github/workflows/ci.yml` |
+| Docker | `ARG GIT_SHA` → `/p:GitSha=${GIT_SHA}` in `Dockerfile` |
+
+The informational version becomes `1.0.0+abc1234` (semver + build metadata). `/api/release-info` exposes both `version` and `informationalVersion`. The git SHA is also embedded as `AssemblyMetadata` so it survives even if the `GIT_SHA` env var is missing.
+
+```bash
+curl http://localhost:5080/api/release-info
+# "informationalVersion": "1.0.0+a1b2c3d", "gitSha": "a1b2c3d"
+```
+
+**Interview line:** "We bake the commit SHA into the DLL at build time so release metadata is tied to the artifact, not just the runtime environment."
+
+### OpenTelemetry traces for request latency
+
+**Problem:** `/health` tells you the process is alive, not whether requests are slow or failing deep in the stack.
+
+**Solution:** ASP.NET Core instrumentation creates a trace span per HTTP request (method, route, status, duration). Outgoing `HttpClient` calls (e.g. readiness probes) get child spans.
+
+Configuration in `appsettings.json`:
+
+```json
+"OpenTelemetry": {
+  "ServiceName": "ReleasePipeline.Api",
+  "Exporter": "Console"
+}
+```
+
+- **Console** (default): spans print to stdout — useful locally and in `docker logs`.
+- **Otlp**: set `"Exporter": "Otlp"` and `"OtlpEndpoint": "http://your-collector:4317"` for Jaeger, Grafana Tempo, Azure Monitor, etc.
+
+`/health` is excluded from tracing to avoid noise from kubelet probes every few seconds.
+
+**Interview line:** "We instrument at the framework level so every endpoint gets latency and status without manual timers in each handler."
+
+### `/ready` — readiness vs liveness
+
+**Problem:** Kubernetes (and load balancers) distinguish:
+
+| Probe | Question | This app |
+|-------|----------|----------|
+| **Liveness** (`/health`) | Is the process stuck/crashed? | Always `200` if the app runs |
+| **Readiness** (`/ready`) | Can this instance accept traffic? | Checks downstream dependencies |
+
+**Solution:** `Readiness:Dependencies` in config lists HTTP endpoints to probe before reporting ready:
+
+```json
+"Readiness": {
+  "Dependencies": [
+  {
+    "Name": "payments-api",
+    "Url": "https://payments.internal/health",
+    "TimeoutSeconds": 3
+  }
+  ]
+}
+```
+
+- Empty list → `200` with `"status": "ready"` (no external deps).
+- Any dependency fails → `503` with per-dependency latency and error details.
+
+```bash
+curl http://localhost:5080/ready
+# {"status":"ready","dependencies":[],"timestamp":"..."}
+```
+
+Wire this in Kubernetes as `readinessProbe` (not `livenessProbe`) so unhealthy instances are removed from the service pool without being restarted.
+
+**Interview line:** "Liveness restarts the pod; readiness stops sending traffic. We never put dependency checks on liveness — a downstream outage would cause restart loops."
 
 ## Next step
 
