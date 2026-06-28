@@ -36,13 +36,25 @@ dotnet run --project src/ReleasePipeline.Api
 
 # Open http://localhost:5080/health
 # Open http://localhost:5080/api/release-info
+# With Postgres running: http://localhost:5080/api/deployments
 ```
+
+**Database integration tests (optional locally):**
+
+```bash
+docker compose up postgres -d
+export ConnectionStrings__Default="Host=localhost;Port=5432;Database=release_pipeline;Username=app;Password=app"
+dotnet test --configuration Release
+```
+
+Without Postgres, non-database tests still run; database tests are skipped automatically.
 
 **Docker:**
 
 ```bash
 docker compose up --build
 # http://localhost:8080/health
+# http://localhost:8080/api/deployments
 ```
 
 ## Pipeline architecture
@@ -81,6 +93,7 @@ ci-cd/
 ├── docs/               # Step-by-step lessons
 ├── src/ReleasePipeline.Api/
 ├── tests/ReleasePipeline.Api.Tests/
+├── scripts/init-test-db.sql
 ├── Dockerfile
 ├── docker-compose.yml
 └── ReleasePipeline.sln

@@ -23,10 +23,16 @@ Common gates:
 tests/ReleasePipeline.Api.Tests/
 ├── HealthEndpointTests.cs
 ├── ReleaseInfoEndpointTests.cs
+├── ReadyEndpointTests.cs
+├── DeploymentsEndpointTests.cs      # requires Postgres
+├── ReadyWithDatabaseTests.cs        # requires Postgres
+├── PostgresWebApplicationFactory.cs
 └── ReleasePipeline.Api.Tests.csproj
 ```
 
 We use `WebApplicationFactory<Program>` — this spins up the real API in-memory and hits HTTP endpoints. That's an **integration test**, which is more valuable than testing controllers in isolation for pipeline demos.
+
+Database-backed tests use a **Postgres service container on the GitHub runner** (see `.github/workflows/ci.yml`). Tests apply EF migrations and seed minimal rows automatically. Locally, start Postgres with `docker compose up postgres -d` and set `ConnectionStrings__Default`.
 
 ## Run tests locally
 

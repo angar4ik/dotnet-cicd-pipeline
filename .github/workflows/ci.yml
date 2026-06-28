@@ -15,11 +15,30 @@ permissions:
 env:
   DOTNET_VERSION: "8.0.x"
   SOLUTION: ReleasePipeline.sln
+  POSTGRES_USER: app
+  POSTGRES_PASSWORD: app
+  POSTGRES_DB: release_pipeline_test
+  ConnectionStrings__Default: Host=localhost;Port=5432;Database=release_pipeline_test;Username=app;Password=app
 
 jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: release_pipeline_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U app -d release_pipeline_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout
@@ -37,6 +56,8 @@ jobs:
         run: dotnet build ${{ env.SOLUTION }} --configuration Release --no-restore /p:GitSha=${{ github.sha }}
 
       - name: Test with coverage gate
+        env:
+          ConnectionStrings__Default: ${{ env.ConnectionStrings__Default }}
         run: |
           dotnet test ${{ env.SOLUTION }} \
             --configuration Release \

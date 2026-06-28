@@ -31,8 +31,27 @@ Runs on:
 ## Job structure
 
 ```
-checkout → setup-dotnet → restore → build → test → upload artifacts
+checkout → setup-dotnet → restore → build → test (with Postgres) → upload artifacts
 ```
+
+### Postgres on the GitHub runner
+
+CI starts an ephemeral Postgres 16 **service container** on the same runner as `dotnet test`:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - 5432:5432
+
+env:
+  ConnectionStrings__Default: Host=localhost;Port=5432;Database=release_pipeline_test;...
+```
+
+Integration tests read that connection string, apply EF migrations, seed two deployment rows, and call `/api/deployments` and `/ready`. When the job finishes, the runner (and database) are destroyed.
+
+Locally, run `docker compose up postgres -d` and export the same env var to execute the same tests.
 
 ### Key actions
 
