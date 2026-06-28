@@ -51,6 +51,17 @@ curl http://localhost:5080/api/release-info
 
 Returns: service name, assembly version, environment, git SHA, deploy timestamp.
 
+### `GET /api/deployments`
+
+Returns deployment records from Postgres when `ConnectionStrings:Default` is configured.
+
+```bash
+curl http://localhost:5080/api/deployments
+# [{"id":1,"environment":"staging","status":"success","deployedAt":"..."}, ...]
+```
+
+When no connection string is set, this endpoint is not registered — the API still serves `/health` and `/api/release-info`.
+
 ## Run locally
 
 ```bash

@@ -1,29 +1,81 @@
 using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ReleasePipeline.Api.Data;
 
 namespace ReleasePipeline.Api.Readiness;
 
-public sealed class ReadinessChecker(IHttpClientFactory httpClientFactory, IOptions<ReadinessOptions> options)
+public sealed class ReadinessChecker(
+    IHttpClientFactory httpClientFactory,
+    IOptions<ReadinessOptions> options,
+    IServiceScopeFactory scopeFactory)
 {
     public async Task<ReadinessReport> CheckAsync(CancellationToken cancellationToken = default)
     {
         var dependencies = options.Value.Dependencies;
+        var results = new List<DependencyStatus>(dependencies.Count + 1);
 
-        if (dependencies.Count == 0)
+        if (dependencies.Count > 0)
+        {
+            var client = httpClientFactory.CreateClient(nameof(ReadinessChecker));
+
+            foreach (var dependency in dependencies)
+            {
+                results.Add(await ProbeDependencyAsync(client, dependency, cancellationToken));
+            }
+        }
+
+        var databaseStatus = await ProbeDatabaseAsync(cancellationToken);
+        if (databaseStatus is not null)
+        {
+            results.Add(databaseStatus);
+        }
+
+        if (results.Count == 0)
         {
             return new ReadinessReport("ready", [], DateTime.UtcNow);
         }
 
-        var client = httpClientFactory.CreateClient(nameof(ReadinessChecker));
-        var results = new List<DependencyStatus>(dependencies.Count);
-
-        foreach (var dependency in dependencies)
-        {
-            results.Add(await ProbeDependencyAsync(client, dependency, cancellationToken));
-        }
-
         var status = results.All(result => result.Healthy) ? "ready" : "not_ready";
         return new ReadinessReport(status, results, DateTime.UtcNow);
+    }
+
+    private async Task<DependencyStatus?> ProbeDatabaseAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
+        if (dbContext is null)
+        {
+            return null;
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            var canConnect = await dbContext.Database.CanConnectAsync(cancellationToken);
+            stopwatch.Stop();
+
+            return new DependencyStatus(
+                "postgres",
+                "database",
+                canConnect,
+                canConnect ? 200 : 503,
+                stopwatch.ElapsedMilliseconds,
+                canConnect ? null : "Database connection failed");
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            return new DependencyStatus(
+                "postgres",
+                "database",
+                false,
+                null,
+                stopwatch.ElapsedMilliseconds,
+                ex.Message);
+        }
     }
 
     private static async Task<DependencyStatus> ProbeDependencyAsync(

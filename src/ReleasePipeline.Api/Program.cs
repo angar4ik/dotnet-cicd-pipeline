@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using ReleasePipeline.Api.Data;
 using ReleasePipeline.Api.Readiness;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,15 @@ builder.Services.AddSwaggerGen();
 builder.Services.Configure<ReadinessOptions>(builder.Configuration.GetSection(ReadinessOptions.SectionName));
 builder.Services.AddHttpClient(nameof(ReadinessChecker));
 builder.Services.AddSingleton<ReadinessChecker>();
+
+var connectionString = builder.Configuration.GetConnectionString("Default");
+var databaseConfigured = !string.IsNullOrWhiteSpace(connectionString);
+
+if (databaseConfigured)
+{
+    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+    builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("postgres");
+}
 
 var serviceName = builder.Configuration["OpenTelemetry:ServiceName"] ?? "ReleasePipeline.Api";
 var otelExporter = builder.Configuration["OpenTelemetry:Exporter"] ?? "Console";
@@ -88,6 +99,32 @@ app.MapGet("/api/release-info", () =>
 .WithName("ReleaseInfo")
 .WithTags("Operations");
 
+if (databaseConfigured)
+{
+    app.MapGet("/api/deployments", async (AppDbContext dbContext, CancellationToken cancellationToken) =>
+    {
+        var deployments = await dbContext.Deployments
+            .OrderBy(record => record.Id)
+            .Select(record => new
+            {
+                record.Id,
+                record.Environment,
+                record.Status,
+                record.DeployedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(deployments);
+    })
+    .WithName("ListDeployments")
+    .WithTags("Operations");
+
+    if (app.Environment.IsDevelopment())
+    {
+        await InitializeDevelopmentDatabaseAsync(app.Services);
+    }
+}
+
 app.Run();
 
 static string? GetAssemblyMetadata(Assembly assembly, string key)
@@ -96,6 +133,32 @@ static string? GetAssemblyMetadata(Assembly assembly, string key)
         .GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(attribute => attribute.Key == key)
         ?.Value;
+}
+
+static async Task InitializeDevelopmentDatabaseAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.MigrateAsync();
+
+    if (!await dbContext.Deployments.AnyAsync())
+    {
+        dbContext.Deployments.AddRange(
+            new DeploymentRecord
+            {
+                Environment = "staging",
+                Status = "success",
+                DeployedAt = new DateTime(2026, 1, 15, 10, 0, 0, DateTimeKind.Utc)
+            },
+            new DeploymentRecord
+            {
+                Environment = "production",
+                Status = "success",
+                DeployedAt = new DateTime(2026, 1, 20, 14, 30, 0, DateTimeKind.Utc)
+            });
+
+        await dbContext.SaveChangesAsync();
+    }
 }
 
 // Exposed for integration tests

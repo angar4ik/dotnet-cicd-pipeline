@@ -5,11 +5,11 @@ using Xunit;
 
 namespace ReleasePipeline.Api.Tests;
 
-public class ReleaseInfoEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class ReleaseInfoEndpointTests : IClassFixture<ApiWebApplicationFactory>
 {
     private readonly HttpClient _client;
 
-    public ReleaseInfoEndpointTests(WebApplicationFactory<Program> factory)
+    public ReleaseInfoEndpointTests(ApiWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
     }
