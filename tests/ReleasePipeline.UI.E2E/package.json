@@ -1,0 +1,13 @@
+{
+  "name": "release-pipeline-ui-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "typescript": "~5.4.0"
+  }
+}

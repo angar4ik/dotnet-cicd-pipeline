@@ -67,16 +67,14 @@ var app = builder.Build();
 
 app.UseCors();
 
+// Always serve Angular static files (in dev, Angular dev server runs on 4200 instead)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-}
-else
-{
-    // In production, serve the Angular UI static files
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
@@ -144,11 +142,8 @@ if (databaseConfigured)
     }
 }
 
-// In production, let Angular handle client-side routing
-if (!app.Environment.IsDevelopment())
-{
-    app.MapFallbackToFile("index.html");
-}
+// Let Angular handle client-side routing
+app.MapFallbackToFile("index.html");
 
 app.Run();
 
