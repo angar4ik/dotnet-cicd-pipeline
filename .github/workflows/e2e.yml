@@ -25,6 +25,7 @@ jobs:
     env:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5080
+      ASPNETCORE_CONTENTROOT: src/ReleasePipeline.Api
       BASE_URL: http://localhost:5080
 
     steps:
@@ -55,15 +56,30 @@ jobs:
 
       - name: Start API
         run: |
-          dotnet run --project src/ReleasePipeline.Api --configuration Release --no-build &
-          echo $! > api.pid
+          # Run the published DLL directly (more reliable than dotnet run --no-build)
+          dotnet src/ReleasePipeline.Api/bin/Release/net8.0/ReleasePipeline.Api.dll > /tmp/api.log 2>&1 &
+          API_PID=$!
+          echo "API PID: $API_PID"
+          echo $API_PID > api.pid
+
+          # Wait up to 30 seconds for /health to respond
           for i in $(seq 1 30); do
             if curl -sf http://localhost:5080/health > /dev/null 2>&1; then
-              echo "API is ready"
-              break
+              echo "API ready after ${i}s"
+              exit 0
+            fi
+            # Check if API process is still alive
+            if ! kill -0 $API_PID 2>/dev/null; then
+              echo "API process died! Dumping log:"
+              cat /tmp/api.log
+              exit 1
             fi
             sleep 1
           done
+
+          echo "API did not become ready in 30s. Dumping log:"
+          cat /tmp/api.log
+          exit 1
 
       - name: Install Playwright
         run: |
