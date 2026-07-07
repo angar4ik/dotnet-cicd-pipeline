@@ -1,6 +1,17 @@
-# Multi-stage build: compile in SDK image, run in smaller runtime image.
+# Multi-stage build: compile Angular + .NET, run in smaller runtime image.
 # See docs/03-docker-containerization.md for a line-by-line walkthrough.
 
+# --- Stage 1: Build Angular UI ---
+FROM node:22-alpine AS ui-build
+WORKDIR /ui
+
+COPY src/ReleasePipeline.UI/package.json src/ReleasePipeline.UI/package-lock.json* ./
+RUN npm ci
+
+COPY src/ReleasePipeline.UI/ ./
+RUN npm run build
+
+# --- Stage 2: Build .NET API ---
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
@@ -33,6 +44,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
+COPY --from=ui-build /ui/dist/browser /app/wwwroot
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1

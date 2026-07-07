@@ -77,3 +77,4 @@ jobs:
 
   # Quality gate: tests must pass before any deploy workflow runs on this commit.
   # In a real org, you might add SonarQube, dependency scanning, or approval gates here.
+  # E2E (Playwright) tests run as a separate workflow: .github/workflows/e2e.yml
