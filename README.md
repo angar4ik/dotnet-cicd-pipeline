@@ -9,8 +9,8 @@ A hands-on CI/CD learning project: a small .NET API, automated tests, Docker, an
 | Step | Topic | Doc |
 |------|--------|-----|
 | 0 | Setup & learning path | [docs/00-learning-path.md](docs/00-learning-path.md) |
-| 1 | .NET app + release endpoints | [docs/01-dotnet-app.md](docs/01-dotnet-app.md) |
-| 2 | Automated tests as quality gates | [docs/02-automated-testing.md](docs/02-automated-testing.md) |
+| 1 | .NET app + release endpoints + Angular UI | [docs/01-dotnet-app.md](docs/01-dotnet-app.md) |
+| 2 | Automated tests as quality gates (xUnit + Playwright) | [docs/02-automated-testing.md](docs/02-automated-testing.md) |
 | 3 | Docker containerization | [docs/03-docker-containerization.md](docs/03-docker-containerization.md) |
 | 4 | GitHub Actions CI | [docs/04-github-actions-ci.md](docs/04-github-actions-ci.md) |
 | 5 | GitHub Actions CD (Docker + deploy) | [docs/05-github-actions-cd.md](docs/05-github-actions-cd.md) |
@@ -20,23 +20,34 @@ A hands-on CI/CD learning project: a small .NET API, automated tests, Docker, an
 
 ## Quick start
 
-**Prerequisites:** [.NET 8 SDK](https://dotnet.microsoft.com/download), [Docker](https://docs.docker.com/get-docker/) (optional for local container runs)
+**Prerequisites:** [.NET 8 SDK](https://dotnet.microsoft.com/download), [Node.js 22+](https://nodejs.org/), [Docker](https://docs.docker.com/get-docker/) (optional for local container runs)
 
 ```bash
 # Clone and enter the repo
 cd ci-cd
 
-# Restore, build, test
+# Restore, build, test (.NET)
 dotnet restore
 dotnet build --configuration Release
 dotnet test --configuration Release
 
-# Run locally
+# Build Angular UI
+cd src/ReleasePipeline.UI && npm ci && npm run build && cd ../..
+
+# Run API locally (serves the dashboard UI)
 dotnet run --project src/ReleasePipeline.Api
 
+# Open http://localhost:5080 — full dashboard
 # Open http://localhost:5080/health
-# Open http://localhost:5080/api/release-info
-# With Postgres running: http://localhost:5080/api/deployments
+# Open http://localhost:5080/swagger (API docs)
+```
+
+**E2E tests (Playwright):**
+
+```bash
+cd tests/ReleasePipeline.UI.E2E
+npm ci
+npx playwright test
 ```
 
 **Database integration tests (optional locally):**
@@ -72,6 +83,12 @@ flowchart LR
     Gate[Quality gate]
   end
 
+  subgraph e2e [E2E Workflow]
+    UI[Angular build]
+    Start[Start API + UI]
+    PW[Playwright tests]
+  end
+
   subgraph cd [CD Workflow]
     Docker[Docker build]
     GHCR[Push to GHCR]
@@ -80,6 +97,7 @@ flowchart LR
   end
 
   PR --> Build --> Test --> Gate
+  PR --> UI --> Start --> PW
   Merge --> Docker --> GHCR --> Deploy --> Smoke
 ```
 
@@ -88,13 +106,18 @@ flowchart LR
 ```
 ci-cd/
 ├── .github/workflows/
-│   ├── ci.yml          # Build + test on every PR/push
+│   ├── ci.yml          # Build + unit/integration tests on every PR/push
+│   ├── e2e.yml         # Playwright E2E tests (Angular UI + API)
 │   └── cd.yml          # Docker build/push + deploy
 ├── docs/               # Step-by-step lessons
-├── src/ReleasePipeline.Api/
-├── tests/ReleasePipeline.Api.Tests/
+├── src/
+│   ├── ReleasePipeline.Api/    # .NET 8 minimal API
+│   └── ReleasePipeline.UI/     # Angular 18 dashboard
+├── tests/
+│   ├── ReleasePipeline.Api.Tests/  # xUnit integration tests
+│   └── ReleasePipeline.UI.E2E/    # Playwright browser tests
 ├── scripts/init-test-db.sql
-├── Dockerfile
+├── Dockerfile           # Multi-stage: Angular + .NET
 ├── docker-compose.yml
 └── ReleasePipeline.sln
 ```

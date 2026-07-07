@@ -14,6 +14,9 @@ Automate **build + test on every push and PR** — the first half of "continuous
 
 This lesson covers `.github/workflows/ci.yml`.
 
+> **Playwright E2E tests** run as a separate workflow: `.github/workflows/e2e.yml`
+> (see [lesson 2](02-automated-testing.md#playwright-e2e-tests)).
+
 ## Workflow triggers
 
 ```yaml
@@ -73,7 +76,7 @@ Settings → Branches → Add rule for `main`:
 
 - ✅ Require status checks to pass before merging
 - ✅ Require branches to be up to date
-- Select: **Build & Test** (from CI workflow)
+- Select: **Build & Test** (from CI workflow) and **Playwright E2E Tests** (from E2E workflow)
 
 Now PRs cannot merge with failing tests — a real quality gate.
 

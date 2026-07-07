@@ -64,19 +64,35 @@ When no connection string is set, this endpoint is not registered — the API st
 
 ## Run locally
 
+**API only:**
 ```bash
 dotnet run --project src/ReleasePipeline.Api
 ```
 
+**With Angular UI:**
+```bash
+# Terminal 1: start API
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/ReleasePipeline.Api
+
+# Terminal 2: build Angular UI and start dev server
+cd src/ReleasePipeline.UI
+npm ci && npm run build
+npm start
+```
+
+Then open **http://localhost:4200** (Angular dev server, proxies API calls) or
+**http://localhost:5080** (API serves built UI from `wwwroot/`).
+
 Swagger UI (Development only): http://localhost:5080/swagger
+Dashboard UI (served by API): http://localhost:5080/
 
 ## CI/CD connection
 
 | Concern | How this app supports it |
 |---------|---------------------------|
-| Build | `dotnet build` compiles to DLL |
-| Test | Integration tests call `/health` and `/api/release-info` |
-| Container | `dotnet publish` output copied into Docker image |
+| Build | `dotnet build` compiles to DLL; `npm run build` compiles Angular |
+| Test | xUnit integration tests + Playwright E2E browser tests |
+| Container | Multi-stage Dockerfile: Angular (node:22) + .NET SDK → runtime image |
 | Deploy verify | Smoke test hits `/health` after deploy |
 
 ## Check yourself

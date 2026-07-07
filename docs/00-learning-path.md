@@ -35,6 +35,7 @@ Every doc follows the same structure:
 Install:
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [Node.js 22+](https://nodejs.org/)
 - [Git](https://git-scm.com/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine on Linux)
 - A [GitHub](https://github.com) account
@@ -43,6 +44,7 @@ Verify:
 
 ```bash
 dotnet --version    # 8.x
+node --version      # >=22
 docker --version
 git --version
 ```
