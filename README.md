@@ -1,23 +1,3 @@
-# Release Pipeline Lab
-
-A hands-on CI/CD learning project: a small .NET API, automated tests, Docker, and GitHub Actions pipelines you can show in interviews.
-
-> **Interview line:** "I've been doing CI/CD in production at work, and here's a reference implementation I built."
-
-## What you'll learn
-
-| Step | Topic | Doc |
-|------|--------|-----|
-| 0 | Setup & learning path | [docs/00-learning-path.md](docs/00-learning-path.md) |
-| 1 | .NET app + release endpoints + Angular UI | [docs/01-dotnet-app.md](docs/01-dotnet-app.md) |
-| 2 | Automated tests as quality gates (xUnit + Playwright) | [docs/02-automated-testing.md](docs/02-automated-testing.md) |
-| 3 | Docker containerization | [docs/03-docker-containerization.md](docs/03-docker-containerization.md) |
-| 4 | GitHub Actions CI | [docs/04-github-actions-ci.md](docs/04-github-actions-ci.md) |
-| 5 | GitHub Actions CD (Docker + deploy) | [docs/05-github-actions-cd.md](docs/05-github-actions-cd.md) |
-| 6 | Deployment (simulated + Azure) | [docs/06-deployment.md](docs/06-deployment.md) |
-| 7 | Interview stories | [docs/07-interview-stories.md](docs/07-interview-stories.md) |
-| 8 | Resume positioning | [docs/08-resume-positioning.md](docs/08-resume-positioning.md) |
-
 ## Quick start
 
 **Prerequisites:** [.NET 8 SDK](https://dotnet.microsoft.com/download), [Node.js 22+](https://nodejs.org/), [Docker](https://docs.docker.com/get-docker/) (optional for local container runs)
