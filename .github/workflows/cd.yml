@@ -26,16 +26,8 @@ env:
   IMAGE_NAME: release-pipeline-api
 
 jobs:
-  ci-check:
-    name: Verify CI passed
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require green CI on main
-        run: echo "CD runs only after merge to main; CI workflow must pass on the same commit."
-
   build-and-push:
     name: Docker Build & Push
-    needs: ci-check
     runs-on: ubuntu-latest
 
     outputs:
@@ -114,6 +106,30 @@ jobs:
         run: |
           echo "In production, this step would curl https://your-app.azurewebsites.net/health"
           echo "Smoke check: PASS (simulated)"
+
+  smoke-prod:
+    name: Prod Smoke Tests
+    needs: deploy-simulated
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder — real prod tests go here
+        run: |
+          echo "=== Production smoke tests (placeholder) ==="
+          echo "This is where you'd run tests against the real deployed environment:"
+          echo "  - Playwright tests targeting the production URL"
+          echo "  - API contract tests against live endpoints"
+          echo "  - Synthetic monitoring checks (health, latency, critical flows)"
+          echo ""
+          echo "Setup needed:"
+          echo "  1. Deploy the app to a real environment (Azure, k8s, etc.)"
+          echo "  2. Set PROD_URL secret in GitHub → repo Settings → Secrets"
+          echo "  3. Replace this placeholder with actual test commands"
+          echo ""
+          echo "Example:"
+          echo "  curl -f \$PROD_URL/health"
+          echo "  cd tests/ReleasePipeline.UI.E2E && BASE_URL=\$PROD_URL npx playwright test"
+          echo ""
+          echo "Smoke check: SKIPPED (placeholder)"
 
   deploy-azure:
     name: Deploy (Azure App Service)

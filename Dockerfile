@@ -4,13 +4,12 @@
 # --- Stage 1: Build Angular UI ---
 FROM node:22-alpine AS ui-build
 WORKDIR /ui
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 COPY src/ReleasePipeline.UI/package.json src/ReleasePipeline.UI/package-lock.json* ./
 RUN npm ci
 
 COPY src/ReleasePipeline.UI/ ./
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=8192" npm run build
 
 # --- Stage 2: Build .NET API ---
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
