@@ -4,6 +4,7 @@
 # --- Stage 1: Build Angular UI ---
 FROM node:22-alpine AS ui-build
 WORKDIR /ui
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 COPY src/ReleasePipeline.UI/package.json src/ReleasePipeline.UI/package-lock.json* ./
 RUN npm ci
