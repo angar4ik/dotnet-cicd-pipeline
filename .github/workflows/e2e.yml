@@ -25,7 +25,7 @@ jobs:
     env:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:5080
-      ASPNETCORE_CONTENTROOT: src/ReleasePipeline.Api
+      ASPNETCORE_CONTENTROOT: ${{ github.workspace }}/src/ReleasePipeline.Api
       BASE_URL: http://localhost:5080
 
     steps:
