@@ -12,14 +12,18 @@ Automate **Docker build, registry push, and deployment** after code lands on `ma
 
 ```mermaid
 flowchart TD
-  A[Push to main] --> B[ci-check job]
-  B --> C[build-and-push]
-  C --> D{Deploy target}
-  D -->|default| E[deploy-simulated]
-  D -->|manual azure| F[deploy-azure]
-  E --> G[Upload manifest artifact]
+  A[Push to main] --> B[build-and-push]
+  B --> C{Deploy target}
+  C -->|default| D[deploy-simulated]
+  C -->|manual azure| F[deploy-azure]
+  D --> G[Upload manifest artifact]
+  D --> E[smoke-prod — placeholder]
   F --> H[Smoke test]
 ```
+
+CD runs independently — it does **not** wait for CI or E2E workflows. Those gate PRs
+before merge. By the time code lands on `main`, it's already been tested. CD focuses on
+Docker build, push, deploy, and **post-deploy production smoke tests**.
 
 ## Job 1: Docker build and push
 
@@ -49,7 +53,20 @@ permissions:
 
 **Best practice:** deploy by SHA tag, not `latest`, in production.
 
-## Job 2: Simulated deploy
+## Job 2: Production smoke tests (placeholder)
+
+Runs after deploy. **This is where you target the real prod environment** — not CI-style tests
+against a disposable runner, but live checks against the deployed app:
+
+```bash
+# Example: health check against prod URL
+curl -f $PROD_URL/health
+
+# Example: Playwright E2E against prod
+cd tests/ReleasePipeline.UI.E2E && BASE_URL=$PROD_URL npx playwright test
+```
+
+Currently a placeholder — replace with real tests once you have a production deployment target.
 
 Runs automatically on push to `main`. Writes `deployment-manifest.json`:
 
