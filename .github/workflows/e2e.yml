@@ -1,0 +1,87 @@
+# GitHub Actions — Playwright E2E tests
+# Spins up the full app (Angular UI + .NET API) and runs browser smoke tests.
+
+name: E2E (Playwright)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  SOLUTION: ReleasePipeline.sln
+
+jobs:
+  e2e:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5080
+      BASE_URL: http://localhost:5080
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build Angular UI
+        run: |
+          cd src/ReleasePipeline.UI
+          npm ci
+          npm run build
+
+      - name: Copy UI to API wwwroot
+        run: mkdir -p src/ReleasePipeline.Api/wwwroot && cp -r src/ReleasePipeline.UI/dist/browser/* src/ReleasePipeline.Api/wwwroot/
+
+      - name: Build .NET API
+        run: dotnet build ${{ env.SOLUTION }} --configuration Release /p:UseAppHost=false /p:GitSha=${{ github.sha }}
+
+      - name: Start API
+        run: |
+          dotnet run --project src/ReleasePipeline.Api --configuration Release --no-build &
+          echo $! > api.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5080/health > /dev/null 2>&1; then
+              echo "API is ready"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Install Playwright
+        run: |
+          cd tests/ReleasePipeline.UI.E2E
+          npm ci
+          npx playwright install chromium --with-deps
+
+      - name: 🔍 Run Playwright tests
+        run: cd tests/ReleasePipeline.UI.E2E && npx playwright test
+
+      - name: Stop API
+        if: always()
+        run: kill $(cat api.pid) 2>/dev/null || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: tests/ReleasePipeline.UI.E2E/playwright-report/
+          retention-days: 7
