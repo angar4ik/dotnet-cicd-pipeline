@@ -4,5 +4,7 @@ obj/
 .github/
 TestResults/
 deploy-artifacts/
+node_modules/
+dist/
 *.md
 docs/

@@ -8,6 +8,17 @@ using ReleasePipeline.Api.Readiness;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// CORS: allow Angular dev server (port 4200) during local development
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.Configure<ReadinessOptions>(builder.Configuration.GetSection(ReadinessOptions.SectionName));
@@ -54,10 +65,18 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+app.UseCors();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    // In production, serve the Angular UI static files
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
@@ -123,6 +142,12 @@ if (databaseConfigured)
     {
         await InitializeDevelopmentDatabaseAsync(app.Services);
     }
+}
+
+// In production, let Angular handle client-side routing
+if (!app.Environment.IsDevelopment())
+{
+    app.MapFallbackToFile("index.html");
 }
 
 app.Run();
