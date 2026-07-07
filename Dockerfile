@@ -2,7 +2,7 @@
 # See docs/03-docker-containerization.md for a line-by-line walkthrough.
 
 # --- Stage 1: Build Angular UI ---
-FROM node:22-alpine AS ui-build
+FROM node:22-slim AS ui-build
 WORKDIR /ui
 
 COPY src/ReleasePipeline.UI/package.json src/ReleasePipeline.UI/package-lock.json* ./
