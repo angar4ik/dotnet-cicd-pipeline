@@ -1,4 +1,4 @@
-# GitHub Actions — Playwright E2E tests
+# GitHub Actions — Build & Test
 # Spins up the full app (Angular UI + .NET API) and runs browser smoke tests.
 
 name: CI UI (Playwright)
@@ -16,7 +16,7 @@ env:
 
 jobs:
   e2e:
-    name: Playwright E2E Tests
+    name: Build & Test
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
