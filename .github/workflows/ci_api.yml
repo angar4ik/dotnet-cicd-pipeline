@@ -1,7 +1,7 @@
 # GitHub Actions — CI pipeline (build + test + quality gate)
 # Lesson: docs/04-github-actions-ci.md
 
-name: CI
+name: CI API (xUnit)
 
 on:
   pull_request:
